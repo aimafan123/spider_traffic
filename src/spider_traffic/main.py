@@ -9,16 +9,19 @@ from spider_traffic.myutils import project_path
 from spider_traffic.myutils.config import SPIDER_MODE, config
 from spider_traffic.myutils.logger import logger
 from spider_traffic.spider.task import task_instance
+from spider_traffic.tls_decoder.http2decoder import HTTP2Decoder
 from spider_traffic.torDo import close_tor, start_tor
 
 
 def run_action_script(traffic_path):
     command = ["../.venv/bin/python3", "-m", "spider_traffic.action", traffic_path]
-    # 使用 subprocess 运行 action.py
+    # 使用 subprocess 运行 action.py，模拟使用浏览器访问网站
     subprocess.run(command)
 
 
 def browser_action():
+    sslkeylog_file_path = "/tmp/sslkeys.log"
+    os.environ["SSLKEYLOGFILE"] = sslkeylog_file_path
     VPS_NAME = config["information"]["name"]
     PROTOCAL_NAME = config["information"]["protocal"]
     SITE_NAME = config["information"]["site"]
@@ -89,6 +92,13 @@ def browser_action():
                 if os.path.exists(traffic_path):
                     os.remove(traffic_path)
 
+        # 首先清空sslkeys.log文件
+        sslkeylog_path = os.environ.get("SSLKEYLOGFILE")
+        if sslkeylog_path and os.path.exists(sslkeylog_path):
+            with open(sslkeylog_path, "w") as f:
+                f.truncate(0)
+            logger.info(f"清空SSLKEYLOGFILE文件: {sslkeylog_path}")
+
         traffic_process, proxy_process, result, traffic_path = begin()
         if result is False:
             stop(traffic_process, proxy_process, traffic_path, False)
@@ -111,6 +121,37 @@ def browser_action():
         logger.info("等待流量结束")
 
         stop(traffic_process, proxy_process, traffic_path, True)
+
+        # --- 新增的集成逻辑 ---
+        # 如果是 direct 模式，则在流量收集结束后，调用解码器
+        if SPIDER_MODE == "direct":
+            logger.info(f"开始对 {traffic_path} 进行HTTP/2解码...")
+            sslkeylog_path = os.environ.get("SSLKEYLOGFILE")
+
+            if not sslkeylog_path or not os.path.exists(sslkeylog_path):
+                logger.error(f"SSLKEYLOGFILE未找到于: {sslkeylog_path}。跳过解码。")
+            elif not os.path.exists(traffic_path):
+                logger.error(f"Pcap文件未找到于: {traffic_path}。跳过解码。")
+            else:
+                try:
+                    # 根据pcap文件名生成解码结果的json文件名
+                    output_json_path = os.path.splitext(traffic_path)[0] + ".json"
+
+                    # 实例化并运行解码器
+                    decoder = HTTP2Decoder(
+                        pcap_file=traffic_path, sslkeylog_file=sslkeylog_path
+                    )
+                    decoder.decode()
+                    results = decoder.get_results()
+
+                    # 将解码结果写入JSON文件
+                    with open(output_json_path, "w", encoding="utf-8") as f:
+                        json.dump(results, f, ensure_ascii=False, indent=4)
+                    logger.info(f"HTTP/2解码完成，结果已保存至: {output_json_path}")
+
+                except Exception as e:
+                    logger.error(f"HTTP/2解码过程中发生错误: {e}", exc_info=True)
+        # --------------------
 
         logger.info(f"第{str(task_instance.current_index)}个url爬取完成，爬取下一个url")
         task_instance.current_index = (

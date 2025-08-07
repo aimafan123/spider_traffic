@@ -1,22 +1,52 @@
 # 流量捕获系统Spider Traffic
 
-Spider Traffic 是一个用于采集和分析网络流量的自动化爬虫框架。该项目结合了网络爬虫技术和流量捕获机制，能够在不同的代理模式（如 Xray、Tor、Direct）下进行流量采集，并生成相应的 PCAP 文件。
+Spider Traffic 是一个集成了网络爬虫与流量捕获功能的高度自动化框架。它能够在多种代理模式（直连、Xray、Tor）下模拟浏览器行为，精确捕获和分析加密流量，并特别支持在直连模式下自动解码 HTTP/2 流量，为网络行为分析、安全研究和性能评测提供强大的数据支持。
 
 ## 核心功能
 ### 网络爬取与流量采集
 
-通过 Scrapy 爬虫框架自动爬取目标网站的数据。
-使用 tcpdump 进行网络流量捕获，生成 .pcap 格式的数据文件。
+- 全自动工作流: 从启动浏览器、执行访问、捕获流量到关闭进程，全程无需人工干预。
+- 多代理模式支持:
+    - direct 模式: 直接连接目标网站，适用于常规流量分析。
+    - xray 模式: 通过 Xray 代理进行流量中继，支持复杂的路由和协议。
+    - tor 模式: 基于 Tor 网络进行匿名化访问。
+- 精准的流量捕获: 使用 tcpdump 在底层捕获指定网络接口的全部流量，并保存为标准的 .pcap 文件。
+- 自动化 HTTP/2 解码 (new!): 在 direct 模式下，系统能够利用浏览器导出的 SSLKEYLOGFILE 自动解密并解析捕获到的 TLS 流量，提取出 HTTP/2 的详细请求数据（如 URL、请求/响应大小等），并将其结构化为 JSON 文件。
+- 灵活的 Docker 部署: 提供多版本操作系统的 Dockerfile，支持快速构建和迁移。
 
-### 多种代理模式支持
-Xray 模式：通过 Xray 代理进行流量传输。
-Tor 模式：基于 Tor 网络进行匿名访问。
-Direct 模式：直接访问目标网站。
+## 系统输出
+系统运行后，您将获得两种核心产物：
+1. 原始流量包 (.pcap):
+- 在所有模式下，系统都会生成 .pcap 文件。
+- 这些文件包含了完整的网络通信数据，可以使用 Wireshark 等工具进行深度分析。
 
-### 自动化控制
-通过 main.py 作为入口，自动调度流量采集与爬虫执行。
-运行过程中动态管理 Chrome 进程，确保流量采集的完整性。
-任务完成后自动停止代理服务和流量采集进程。
+2. HTTP/2 解码数据 (_decoded.json):
+- 仅在 direct 模式下自动生成，文件名与对应的 .pcap 文件关联（例如 traffic_xxx.json）。
+- 该文件以 JSON 格式清晰地展示了每个 TCP 流（Flow）中解密后的 HTTP/2 资源信息。
+
+JSON 文件结构示例:
+
+```JSON
+{
+    "['192.168.1.10', 54321, '104.18.32.123', 443]": {
+        "sni": "example.com",
+        "resources": [
+            {
+                "stream_id": "1",
+                "url": "https://example.com/",
+                "request_data_size": 0,
+                "resource_data_size": 25680
+            },
+            {
+                "stream_id": "3",
+                "url": "https://example.com/assets/main.css",
+                "request_data_size": 0,
+                "resource_data_size": 13450
+            }
+        ]
+    }
+}
+```
 
 ## 构建 Docker 镜像
 
@@ -34,7 +64,7 @@ brew install git-lfs        // mac
 
 2. 克隆项目
 ```bash
-git clone --recurse-submodules https://github.com/ZGC-BUPT-aimafan/spider_traffic.git
+git clone --recurse-submodules https://github.com/aimafan123/spider_traffic.git
 cd spider_traffic
 git lfs pull
 ```

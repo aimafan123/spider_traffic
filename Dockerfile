@@ -28,8 +28,8 @@ RUN apt install -y \
     xdg-utils   
 
 # 安装基本工具和依赖
-RUN sed -i 's|http://deb.debian.org|http://mirrors.aliyun.com|g' /etc/apt/sources.list && \
-    apt-get update && apt-get install -y \
+# RUN sed -i 's|http://deb.debian.org|http://mirrors.aliyun.com|g' /etc/apt/sources.list && \
+RUN    apt-get update && apt-get install -y \
     vim \
     sudo \
     python3.12 \

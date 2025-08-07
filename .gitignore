@@ -16,3 +16,5 @@ src/auto_bushu/server_info.py
 config/*
 !config/.gitkeep
 !data/torData
+
+*.tar
