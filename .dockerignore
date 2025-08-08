@@ -1,2 +1,5 @@
 .venv
 test
+*.tar
+data/*
+logs/*
