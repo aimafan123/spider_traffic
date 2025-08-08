@@ -56,7 +56,8 @@ RUN    apt-get update && apt-get install -y \
     dh-apparmor \
     ethtool \
     libpcap-dev \
-    tcpdump 
+    tcpdump \
+    tshark
 
 # 将vim设为默认编辑器
 RUN update-alternatives --set editor /usr/bin/vim.basic

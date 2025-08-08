@@ -23,7 +23,6 @@ def browser_action():
     sslkeylog_file_path = "/tmp/sslkeys.log"
     os.environ["SSLKEYLOGFILE"] = sslkeylog_file_path
     VPS_NAME = config["information"]["name"]
-    PROTOCAL_NAME = config["information"]["protocal"]
     SITE_NAME = config["information"]["site"]
 
     # 检查SPIDER_MODE是否为有效值
@@ -34,8 +33,13 @@ def browser_action():
         )
 
     if SPIDER_MODE == "xray":
+        PROTOCAL_NAME = config["information"]["protocal"]
         xray_path = os.path.join(project_path, "bin", "Xray-linux-64", "xray")
         config_path = os.path.join(project_path, "config", "xray.json")
+    elif SPIDER_MODE == "tor":
+        PROTOCAL_NAME = config["information"]["protocal"]
+    else:  # direct
+        PROTOCAL_NAME = "direct"
 
     while True:
 
