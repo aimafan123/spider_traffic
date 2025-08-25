@@ -44,6 +44,9 @@ def create_chrome_driver():
         )
         chrome_options.add_argument(f"--proxy-server={proxy_host_port}")
 
+    if config["spider"]["disable_quic"].lower() == "true":
+        chrome_options.add_argument("--disable-quic")
+
     chrome_options.add_argument("--headless")  # 无界面模式
     chrome_options.add_argument("--disable-gpu")  # 禁用 GPU 加速
     chrome_options.add_argument("--no-sandbox")  # 禁用沙盒
