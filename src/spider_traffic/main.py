@@ -1,5 +1,6 @@
 import json
 import os
+import shutil
 import subprocess
 import threading
 import time
@@ -9,7 +10,7 @@ from spider_traffic.myutils import project_path
 from spider_traffic.myutils.config import SPIDER_MODE, config
 from spider_traffic.myutils.logger import logger
 from spider_traffic.spider.task import task_instance
-from spider_traffic.tls_decoder.http2decoder import HTTP2Decoder
+from spider_traffic.tls_decoder.http2decoder import TLSStreamDecoder
 from spider_traffic.torDo import close_tor, start_tor
 
 
@@ -96,13 +97,6 @@ def browser_action():
                 if os.path.exists(traffic_path):
                     os.remove(traffic_path)
 
-        # 首先清空sslkeys.log文件
-        sslkeylog_path = os.environ.get("SSLKEYLOGFILE")
-        if sslkeylog_path and os.path.exists(sslkeylog_path):
-            with open(sslkeylog_path, "w") as f:
-                f.truncate(0)
-            logger.info(f"清空SSLKEYLOGFILE文件: {sslkeylog_path}")
-
         traffic_process, proxy_process, result, traffic_path = begin()
         if result is False:
             stop(traffic_process, proxy_process, traffic_path, False)
@@ -126,14 +120,32 @@ def browser_action():
 
         stop(traffic_process, proxy_process, traffic_path, True)
 
+        # --- 保存SSLKEY文件并确保命名一致 ---
+        sslkeylog_path = os.environ.get("SSLKEYLOGFILE")
+        if sslkeylog_path and os.path.exists(sslkeylog_path):
+            # 根据pcap文件名生成对应的sslkey文件名
+            base_name = os.path.splitext(traffic_path)[0]
+            sslkey_save_path = base_name + ".log"
+            
+            # 确保目标目录存在
+            os.makedirs(os.path.dirname(sslkey_save_path), exist_ok=True)
+            
+            # 复制SSLKEY文件到与PCAP文件相同的目录，使用相同的基名
+            shutil.copy2(sslkeylog_path, sslkey_save_path)
+            logger.info(f"SSLKEY文件已保存至: {sslkey_save_path}")
+        else:
+            logger.warning(f"SSLKEYLOGFILE未找到或不存在: {sslkeylog_path}")
+
         # --- 新增的集成逻辑 ---
         # 如果是 direct 模式，则在流量收集结束后，调用解码器
         if SPIDER_MODE == "direct":
             logger.info(f"开始对 {traffic_path} 进行HTTP/2解码...")
-            sslkeylog_path = os.environ.get("SSLKEYLOGFILE")
-
-            if not sslkeylog_path or not os.path.exists(sslkeylog_path):
-                logger.error(f"SSLKEYLOGFILE未找到于: {sslkeylog_path}。跳过解码。")
+            
+            # 使用保存的SSLKEY文件进行解码
+            saved_sslkey_path = os.path.splitext(traffic_path)[0] + ".log"
+            
+            if not os.path.exists(saved_sslkey_path):
+                logger.error(f"保存的SSLKEY文件未找到于: {saved_sslkey_path}。跳过解码。")
             elif not os.path.exists(traffic_path):
                 logger.error(f"Pcap文件未找到于: {traffic_path}。跳过解码。")
             else:
@@ -141,9 +153,9 @@ def browser_action():
                     # 根据pcap文件名生成解码结果的json文件名
                     output_json_path = os.path.splitext(traffic_path)[0] + ".json"
 
-                    # 实例化并运行解码器
-                    decoder = HTTP2Decoder(
-                        pcap_file=traffic_path, sslkeylog_file=sslkeylog_path
+                    # 实例化并运行解码器，使用保存的SSLKEY文件
+                    decoder = TLSStreamDecoder(
+                        pcap_file=traffic_path, sslkeylog_file=saved_sslkey_path
                     )
                     decoder.decode()
                     results = decoder.get_results()

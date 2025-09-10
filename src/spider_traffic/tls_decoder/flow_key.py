@@ -3,30 +3,30 @@
 
 
 class FlowKey:
-    def __init__(self, src_ip, src_port, dst_ip, dst_port):
-        if dst_port == 443:
-            self.client = (src_ip, src_port)
-            self.server = (dst_ip, dst_port)
-        elif src_port == 443:
-            self.client = (dst_ip, dst_port)
-            self.server = (src_ip, src_port)
-        else:
-            # 手动比较两个端点，避免 sorted()
-            if (src_ip, src_port) <= (dst_ip, dst_port):
-                self.client = (src_ip, src_port)
-                self.server = (dst_ip, dst_port)
-            else:
-                self.client = (dst_ip, dst_port)
-                self.server = (src_ip, src_port)
+    """
+    A direction-agnostic key for a network flow.
 
-    def reversed(self):
-        return FlowKey(self.server[0], self.server[1], self.client[0], self.client[1])
+    It canonizes the flow by sorting the two endpoints, ensuring that
+    traffic from A to B and B to A results in the same key.
+    """
+
+    def __init__(self, src_ip, src_port, dst_ip, dst_port):
+        # 创建两个端点元组
+        endpoint1 = (src_ip, int(src_port))
+        endpoint2 = (dst_ip, int(dst_port))
+
+        # 排序以创建规范化表示，保证键的唯一性
+        if endpoint1 < endpoint2:
+            self.endpoints = (endpoint1, endpoint2)
+        else:
+            self.endpoints = (endpoint2, endpoint1)
 
     def __hash__(self):
-        return hash((self.client, self.server))
+        return hash(self.endpoints)
 
     def __eq__(self, other):
-        return self.client == other.client and self.server == other.server
+        return isinstance(other, FlowKey) and self.endpoints == other.endpoints
 
     def __repr__(self):
-        return f"{self.client[0]}:{self.client[1]} -> {self.server[0]}:{self.server[1]}"
+        # 表示法也更新为方向无关的
+        return f"Flow({self.endpoints[0][0]}:{self.endpoints[0][1]} <-> {self.endpoints[1][0]}:{self.endpoints[1][1]})"
