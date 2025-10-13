@@ -168,6 +168,7 @@ def browser_action():
     os.environ["SSLKEYLOGFILE"] = sslkeylog_file_path
     VPS_NAME = config["information"]["name"]
     SITE_NAME = config["information"]["site"]
+    is_decode = config["spider"]["is_decode"]
 
     # 检查SPIDER_MODE是否为有效值
     valid_modes = ["xray", "tor", "direct"]
@@ -267,7 +268,8 @@ def browser_action():
         _save_sslkey_files(traffic_path)
 
         # --- 处理流量解码 ---
-        _process_traffic_decoding(traffic_path, SPIDER_MODE, PROTOCAL_NAME)
+        if is_decode.strip().lower() == "true":
+            _process_traffic_decoding(traffic_path, SPIDER_MODE, PROTOCAL_NAME)
 
         logger.info(f"第{str(task_instance.current_index)}个url爬取完成，爬取下一个url")
         task_instance.current_index = (
