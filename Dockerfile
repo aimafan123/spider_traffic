@@ -57,6 +57,7 @@ RUN    apt-get update && apt-get install -y \
     ethtool \
     libpcap-dev \
     tcpdump \
+    libevent-dev \
     tshark
 
 # 将vim设为默认编辑器

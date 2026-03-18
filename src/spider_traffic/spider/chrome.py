@@ -47,7 +47,7 @@ def create_chrome_driver():
     if config["spider"]["disable_quic"].lower() == "true":
         chrome_options.add_argument("--disable-quic")
 
-    chrome_options.add_argument("--headless")  # 无界面模式
+    chrome_options.add_argument("--headless=new")  # 无界面模式
     chrome_options.add_argument("--disable-gpu")  # 禁用 GPU 加速
     chrome_options.add_argument("--no-sandbox")  # 禁用沙盒
     chrome_options.add_argument("--disable-dev-shm-usage")  # 限制使用/dev/shm
