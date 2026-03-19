@@ -28,8 +28,8 @@ RUN apt install -y \
     xdg-utils   
 
 # 安装基本工具和依赖
-# RUN sed -i 's|http://deb.debian.org|http://mirrors.aliyun.com|g' /etc/apt/sources.list && \
-RUN    apt-get update && apt-get install -y \
+RUN sed -i 's|http://deb.debian.org|http://mirrors.aliyun.com|g' /etc/apt/sources.list && \
+    apt-get update && apt-get install -y \
     vim \
     sudo \
     python3.12 \
@@ -76,6 +76,19 @@ RUN sudo dpkg -i bin/google-chrome-stable_current_amd64.deb
 RUN sudo apt install -f
 RUN sudo dpkg -i bin/google-chrome-stable_current_amd64.deb
 RUN sudo mv bin/chromedriver-linux64/chromedriver /usr/bin
+RUN sudo chmod +x /usr/bin/chromedriver
+
+RUN sudo dpkg -i bin/microsoft-edge-stable_146.0.3856.62-1_amd64.deb
+RUN sudo apt install -f
+RUN sudo dpkg -i bin/microsoft-edge-stable_146.0.3856.62-1_amd64.deb
+RUN sudo mv bin/msedgedriver /usr/bin/msedgedriver
+RUN sudo chmod +x /usr/bin/msedgedriver
+
+RUN sudo dpkg -i bin/firefox_148.0.2+build1-0ubuntu0.24.04.1~mt1_amd64.deb
+RUN sudo apt install -f
+RUN sudo dpkg -i bin/firefox_148.0.2+build1-0ubuntu0.24.04.1~mt1_amd64.deb
+RUN sudo mv bin/geckodriver /usr/bin/geckodriver
+RUN sudo chmod +x /usr/bin/geckodriver
 
 
 # 默认命令，打开vim

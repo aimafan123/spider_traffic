@@ -2,6 +2,7 @@ import json
 import math
 import os
 import random
+import subprocess
 import time
 
 from selenium import webdriver
@@ -133,7 +134,26 @@ def add_cookies(browser):
                 browser.add_cookie(cookie)
 
 
-# 使用示例
-browser = create_chrome_driver()
-# ... 你的其他浏览器自动化任务
-browser.quit()
+def kill_chrome_processes():
+    """清除浏览器进程"""
+    try:
+        subprocess.run(
+            ["pkill", "-f", "chromedriver"],
+            check=False,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+        subprocess.run(
+            ["pkill", "-f", "google-chrome"],
+            check=False,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+    except subprocess.CalledProcessError as e:
+        print(f"Error occurred: {e.stderr.decode('utf-8')}")
+
+
+# # 使用示例
+# browser = create_chrome_driver()
+# # ... 你的其他浏览器自动化任务
+# browser.quit()

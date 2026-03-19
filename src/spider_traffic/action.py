@@ -11,6 +11,7 @@ from scrapy.utils.project import get_project_settings
 from spider_traffic.myutils import project_path
 from spider_traffic.myutils.config import config
 from spider_traffic.myutils.logger import logger
+
 from spider_traffic.spider.spiders.trace import Spider
 from spider_traffic.traffic.capture import capture
 
@@ -46,19 +47,6 @@ def start_spider(pcap_path):
 
     stop_signal_queue.get()
     logger.info("收到停止信号，准备停止爬虫。")
-
-
-def kill_chrome_processes():
-    try:
-        # Run the command to kill all processes containing 'chrome'
-        subprocess.run(
-            ["sudo", "pkill", "-f", "chrome"],
-            check=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-        )
-    except subprocess.CalledProcessError as e:
-        print(f"Error occurred: {e.stderr.decode('utf-8')}")
 
 
 def traffic(VPS_NAME, PROTOCAL_NAME, SITE_NAME, url):

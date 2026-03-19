@@ -5,10 +5,11 @@ import subprocess
 import threading
 import time
 
-from spider_traffic.action import kill_chrome_processes, traffic
+from spider_traffic.action import traffic
 from spider_traffic.myutils import project_path
 from spider_traffic.myutils.config import SPIDER_MODE, config
 from spider_traffic.myutils.logger import logger
+from spider_traffic.spider import kill_browsers
 from spider_traffic.spider.task import task_instance
 from spider_traffic.tls_decoder.http2decoder import TLSStreamDecoder
 from spider_traffic.tls_decoder.TrojanDecoder import action as decode_trojan
@@ -169,12 +170,18 @@ def browser_action():
     VPS_NAME = config["information"]["name"]
     SITE_NAME = config["information"]["site"]
     is_decode = config["spider"]["is_decode"]
+    browser_name = config["spider"].get("browser", "chrome").strip().lower()
 
     # 检查SPIDER_MODE是否为有效值
     valid_modes = ["xray", "tor", "direct"]
     if SPIDER_MODE not in valid_modes:
         raise ValueError(
             f"Invalid SPIDER_MODE: {SPIDER_MODE}. Must be one of {valid_modes}."
+        )
+    valid_browsers = ["chrome", "edge", "firefox"]
+    if browser_name not in valid_browsers:
+        raise ValueError(
+            f"Invalid browser: {browser_name}. Must be one of {valid_browsers}."
         )
 
     if SPIDER_MODE == "xray":
@@ -190,7 +197,7 @@ def browser_action():
 
         def begin():
             # 开流量收集
-            kill_chrome_processes()
+            kill_browsers(browser_name)
             traffic_process, traffic_path = traffic(
                 VPS_NAME, PROTOCAL_NAME, SITE_NAME, task_instance.current_start_url
             )
@@ -255,10 +262,10 @@ def browser_action():
         action_thread.start()
         # 等待线程完成
         action_thread.join()
-
+        print()
         time.sleep(3)
         logger.info("关闭浏览器进程")
-        kill_chrome_processes()
+        kill_browsers(browser_name)
         time.sleep(30)
         logger.info("等待流量结束")
 

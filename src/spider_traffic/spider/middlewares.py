@@ -15,6 +15,8 @@ from spider_traffic.myutils import project_path
 from spider_traffic.myutils.config import config
 from spider_traffic.myutils.logger import logger, logger_url
 from spider_traffic.spider.chrome import create_chrome_driver, scroll_to_bottom
+from spider_traffic.spider.edge import create_edge_driver
+from spider_traffic.spider.firefox import create_firefox_driver
 from spider_traffic.spider.task import task_instance
 
 
@@ -84,11 +86,33 @@ class SpiderDownloaderMiddleware:
             if int(config["spider"]["webnum"]) != -1
             else 999999
         )
-        self.browser = create_chrome_driver()
+        self.browser = self._create_browser_from_config()
+
+    @staticmethod
+    def _normalize_driver(driver):
+        if isinstance(driver, tuple):
+            return driver[0]
+        return driver
+
+    def _create_browser_from_config(self):
+        browser_name = config["spider"].get("browser", "chrome").strip().lower()
+        browser_creators = {
+            "chrome": create_chrome_driver,
+            "edge": create_edge_driver,
+            "firefox": create_firefox_driver,
+        }
+        create_driver = browser_creators.get(browser_name)
+        if not create_driver:
+            raise ValueError(
+                f"Invalid browser: {browser_name}. Must be one of {list(browser_creators.keys())}."
+            )
+        logger.info(f"使用{browser_name}浏览器访问网站")
+        return self._normalize_driver(create_driver())
 
     def __del__(self):
-        logger.info(f"关闭浏览器驱动")
-        self.browser.close()
+        if hasattr(self, "browser") and self.browser:
+            logger.info(f"关闭浏览器驱动")
+            self.browser.quit()
 
     def process_request(self, request, spider):
         # Called for each request that goes through the downloader
