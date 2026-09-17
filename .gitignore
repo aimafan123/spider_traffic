@@ -18,3 +18,5 @@ config/*
 !data/torData
 
 *.tar
+项目分析报告.md
+技术文档.md

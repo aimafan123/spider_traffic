@@ -19,6 +19,11 @@ from spider_traffic.traffic.capture import capture
 stop_signal_queue = Queue()
 
 
+def _normalize_url_for_path(url):
+    """将 URL 转成适合目录和文件名的字符串。"""
+    return url.split("//")[-1].replace("/", "_")
+
+
 def stop_crawlers_after_delay(process):
     logger.info("定时器到期，停止爬虫。")
     for crawler in process.crawlers:
@@ -54,12 +59,13 @@ def traffic(VPS_NAME, PROTOCAL_NAME, SITE_NAME, url):
     current_time = datetime.now()
     # 格式化输出
     formatted_time = current_time.strftime("%Y%m%d%H%M%S")
+    normalized_url = _normalize_url_for_path(url)
 
     # 输出的格式：协议_时间_设备_位置_网站.pcap
-    output_name = f"{PROTOCAL_NAME}_{formatted_time}_{VPS_NAME}_{SITE_NAME}_{url.split('//')[-1]}.pcap"
-    output_path = os.path.join(
-        project_path, "data", "pcap", url.split("//")[-1], output_name
+    output_name = (
+        f"{PROTOCAL_NAME}_{formatted_time}_{VPS_NAME}_{SITE_NAME}_{normalized_url}.pcap"
     )
+    output_path = os.path.join(project_path, "data", "pcap", normalized_url, output_name)
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
     traffic_process = capture(output_path)
