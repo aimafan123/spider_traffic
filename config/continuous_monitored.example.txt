@@ -1,0 +1,8 @@
+# monitored 站点示例（每行一个主机名，# 开头为注释）
+# 使用方式： cp config/continuous_monitored.example.txt config/continuous_monitored.txt
+# 注意：monitored 站点会被「均匀」访问（每次选访问次数最少的那个），因此列表不宜过长。
+example-monitored-1.com
+example-monitored-2.com
+example-monitored-3.com
+example-monitored-4.com
+example-monitored-5.com

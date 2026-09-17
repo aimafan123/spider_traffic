@@ -1,0 +1,33 @@
+# Continuous Collection 专用镜像
+#
+# 复用主镜像（已内置 Chrome/Edge/Firefox + driver、tcpdump、tshark 与 .venv），
+# 只把默认入口换成连续采集模块，避免重复安装浏览器。
+#
+# 构建：
+#   docker build -f Dockerfile.continuous -t aimafan/spider_traffic:continuous .
+#
+# 运行（抓包需要 --privileged，直连采集建议 --network host）：
+#   docker run --rm -it --privileged --network host \
+#     -v $(pwd)/config:/app/config \
+#     -v $(pwd)/data:/app/data \
+#     -v $(pwd)/logs:/app/logs \
+#     aimafan/spider_traffic:continuous -- --max-visits 50
+#
+# 只验证调度与日志（不抓包、不开浏览器）：
+#   docker run --rm -it --network host \
+#     -v $(pwd)/config:/app/config -v $(pwd)/data:/app/data \
+#     aimafan/spider_traffic:continuous -- --dry-run --max-visits 50
+
+FROM aimafan/spider_traffic:v1
+
+WORKDIR /app
+
+ENV PYTHONUNBUFFERED=1
+ENV CONTINUOUS_CONFIG=/app/config/continuous.yaml
+
+# 说明：
+# - 主镜像把代码放在 /app/src、虚拟环境放在 /app/.venv；
+# - "$@" 用于透传 docker run 追加的参数（例如 --max-visits / --dry-run），
+#   因此用法是 `docker run ... <image> -- <参数>`；
+# - 前置的 `--` 是 $0 占位符，保证 "$@" 只包含用户参数。
+ENTRYPOINT ["bash", "-lc", "cd /app/src && exec ../.venv/bin/python3 -m spider_traffic.continuous --config \"$CONTINUOUS_CONFIG\" \"$@\"", "--"]

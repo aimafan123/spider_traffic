@@ -22,6 +22,7 @@ Spider Traffic 用真实浏览器访问目标站点，同时抓取原始报文�
 - [运行与输出](#运行与输出)
 - [三种运行模式](#三种运行模式)
 - [流量解码](#流量解码)
+- [连续采集 Continuous Collection](#连续采集-continuous-collection)
 - [Docker 部署](#docker-部署)
 - [常见问题排查](#常见问题排查)
 - [已知限制](#已知限制)
@@ -106,12 +107,14 @@ Spider Traffic 用真实浏览器访问目标站点，同时抓取原始报文�
 
 ```text
 spider_traffic/
-├── action.sh                    # 本地启动脚本
+├── action.sh                    # 单 trace 流程启动脚本
+├── continuous.sh                # 连续采集启动脚本
 ├── Dockerfile                   # 主构建文件（Ubuntu + 三浏览器）
+├── Dockerfile.continuous        # 连续采集镜像（基于主镜像，仅替换入口）
 ├── dockerfiles/                 # ubuntu20 / ubuntu24 / debian12 变体
 ├── requirements.txt             # Python 依赖
 ├── requirements/                # 按发行版区分的依赖
-├── config/                      # 运行配置（不入库，需自行准备）
+├── config/                      # 运行配置（不入库，需自行准备；示例文件除外）
 ├── data/                        # 抓包、截图等产物
 ├── logs/                        # 运行日志
 ├── bin/                         # 浏览器 / driver / Xray / Tor 二进制（不入库）
@@ -130,6 +133,7 @@ spider_traffic/
         │   ├── spiders/trace.py # 唯一的 Spider（链接发现）
         │   ├── chrome.py / edge.py / firefox.py   # 浏览器适配
         ├── traffic/capture.py   # tcpdump 抓包封装
+        ├── continuous/          # 连续采集子系统（不依赖 Scrapy，见其 README）
         └── tls_decoder/
             ├── flow_key.py      # 方向无关流键
             ├── http2decoder.py  # HTTP/1.1 + HTTP/2 解码器
@@ -316,7 +320,7 @@ tor 模式额外固定等待 60s（等待 Tor 网络稳定）
 
 ```json
 {
-  "Flow(130.126.157.20:443 <-> 192.168.77.8:57760)": {
+  "Flow(<server-ip>:443 <-> <client-ip>:57760)": {
     "sni": "illinois.edu",
     "resources": [
       {
@@ -406,6 +410,41 @@ pcap
 ```
 
 > 该链路依赖 tshark `follow,tls,raw` 的输出格式，属于仓库中最实验性的部分；重建包的时间戳为构造时间，因此内层时延指标无真实网络意义。
+
+---
+
+## 连续采集 Continuous Collection
+
+除上面的单 trace 流程外，仓库还提供 `src/spider_traffic/continuous/` **连续采集子系统**
+（第一阶段：HTTPS 直连）。它与单 trace 流程完全独立，不导入也不修改现有爬虫代码。
+
+| 能力 | 说明 |
+| --- | --- |
+| 无 Scrapy | 直接复用 `spider/` 下现有的浏览器创建逻辑，每次访问独立浏览器会话 |
+| 混合访问 | monitored 与 background 站点按比例随机混合（支持 1% / 5% / 10%，两种比例模式） |
+| monitored 均衡 | 每次选访问次数最少的站点，任意时刻各站次数差 ≤ 1 |
+| background 不放回 | 默认洗牌后按轮次取完再洗牌（可切换为有放回随机） |
+| 随机间隔 | 默认截断指数分布：mean=20s、min=3s、max=90s，采样可被信号打断 |
+| 独立 seed | 每个 VPS 一份 seed 与状态文件，重启自动续跑 |
+| 持续抓包 | 单个 tcpdump 连续运行，按小时切分 pcap，keylog 与 pcap 同桶对齐 |
+| ground truth | 每次访问一行 JSON：站点、类别、起止时间、耗时、成功/失败、pcap/keylog 路径 |
+
+```bash
+# 准备配置与站点列表
+cp config/continuous.example.yaml          config/continuous.yaml
+cp config/continuous_monitored.example.txt config/continuous_monitored.txt
+cp config/continuous_background.example.txt config/continuous_background.txt
+
+./continuous.sh --dry-run --max-visits 50   # 先验证调度与日志（不抓包、不开浏览器）
+./continuous.sh                             # 正式连续采集，Ctrl-C 优雅退出
+```
+
+产物：`data/continuous/pcap/`、`data/continuous/keylog/`、`data/continuous/ground_truth.jsonl`、
+`data/continuous/state/`。
+
+完整配置说明、调度策略、字段定义与 Docker 用法见
+[`src/spider_traffic/continuous/README.md`](src/spider_traffic/continuous/README.md)；
+容器入口见 [`Dockerfile.continuous`](Dockerfile.continuous)。
 
 ---
 

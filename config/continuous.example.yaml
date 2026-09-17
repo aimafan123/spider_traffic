@@ -1,0 +1,62 @@
+# Continuous Collection 配置示例
+#
+# 使用方式：
+#   cp config/continuous.example.yaml config/continuous.yaml
+#   cp config/continuous_monitored.example.txt config/continuous_monitored.txt
+#   cp config/continuous_background.example.txt config/continuous_background.txt
+#
+# 所有相对路径都相对「仓库根目录」解析。
+# 注意：浏览器级开关（disable_quic、scroll_num、代理等）仍由 config/config.ini 决定，
+#       且连续采集第一阶段要求 config.ini 中 [spider] mode=direct。
+
+vps:
+  name: vps-01            # 每个 VPS 一个名字：seed/状态文件/pcap 名都会带上它
+  site: lab               # 位置标签，仅用于日志与文件名
+  seed: null              # 留空则首次运行自动生成并写入状态文件，重启后继续沿用
+
+browser:
+  name: firefox           # chrome | edge | firefox（复用 spider/ 下现有创建逻辑）
+  settle_seconds: 3.0     # 页面加载完成后的额外停留（秒）
+  page_load_timeout: 60   # 单页加载超时（秒）；超时按访问失败记录
+  scroll: true            # 是否滚动加载；滚动次数沿用 config.ini 的 scroll_num
+  ignore_system_proxy: true   # 直连采集必须保持 true：Firefox 会读取 http_proxy/https_proxy
+                              # 环境变量而走代理，导致抓包里只有隧道流量、没有目标站点 TLS
+  visits_per_browser: 20  # 浏览器常驻：同一个浏览器连续服务 20 次访问后才重启；
+                          # 同一会话内每次访问使用全新标签页（cookie/缓存会话内共享）；
+                          # 设为 1 即恢复"每次访问都重启浏览器"的行为
+
+sites:
+  mode: https             # 第一阶段仅支持 https
+  monitored_file: config/continuous_monitored.txt
+  background_file: config/continuous_background.txt
+  monitored_ratio: 5%     # 支持 1% / 5% / 10%，也支持 0.01 / 0.05 / 0.1
+  ratio_mode: bernoulli   # bernoulli（每次独立随机）| exact（长期比例精确等于配置值）
+  background_sampling: shuffled_cycle   # shuffled_cycle（洗牌不放回）| random_choice（有放回）
+
+sleep:
+  distribution: truncated_exponential
+  mean: 20                # 未截断指数分布的均值（秒）
+  min: 3                  # 下限（秒）
+  max: 90                 # 上限（秒）
+
+capture:
+  enabled: true
+  tcpdump_binary: tcpdump # 可指向自定义路径，便于在无权限环境做联调
+  interface: null         # 留空使用 tcpdump 默认网卡，例如 "eth0"
+  filter_expression: tcp port 443
+  exclude_ports: []       # 例如 [22]，会追加 "and not port 22"
+  snaplen: 0              # 0 = 抓完整包
+  extra_args: []          # 例如 ["-U"] 表示每次收包即写盘
+  rotate_seconds: 3600    # 3600 = 按小时切分 pcap
+  prefix: continuous      # pcap 文件名前缀：<prefix>_<vps>_<YYYYmmdd_HHMMSS>.pcap
+  output_dir: data/continuous/pcap
+  keylog_dir: data/continuous/keylog
+  stderr_log: logs/continuous_tcpdump.log
+
+storage:
+  groundtruth_file: data/continuous/ground_truth.jsonl
+  state_dir: data/continuous/state
+
+max_visits: 0             # 0 = 持续运行；调试时可设为 50
+log_every: 10             # 每 N 次访问输出一次进度
+dry_run: false            # true 等价于命令行 --dry-run（不抓包、不开浏览器）

@@ -15,6 +15,10 @@ config/xray.json
 src/auto_bushu/server_info.py
 config/*
 !config/.gitkeep
+# Continuous Collection 的示例配置与站点列表示例需要入库
+!config/continuous.example.yaml
+!config/continuous_monitored.example.txt
+!config/continuous_background.example.txt
 !data/torData
 
 *.tar

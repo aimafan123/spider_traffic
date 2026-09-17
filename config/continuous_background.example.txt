@@ -1,0 +1,15 @@
+# background 站点示例（每行一个主机名，# 开头为注释）
+# 使用方式： cp config/continuous_background.example.txt config/continuous_background.txt
+# 语义：默认随机打乱后不放回采样，一轮取完再重新洗牌。
+example-background-1.com
+example-background-2.com
+example-background-3.com
+example-background-4.com
+example-background-5.com
+example-background-6.com
+example-background-7.com
+example-background-8.com
+example-background-9.com
+example-background-10.com
+example-background-11.com
+example-background-12.com
